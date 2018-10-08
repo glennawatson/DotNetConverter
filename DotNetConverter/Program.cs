@@ -32,14 +32,19 @@ namespace DotNetConverter
 
                 var yamlRootNode = yaml.Documents[0].RootNode;
 
-                var title = ((string)yamlRootNode["title"]).Replace(" ", "-") + ".md";
+                var title = ((string)yamlRootNode["title"]);
                 var toc = ((string)yamlRootNode["TOCTitle"]).Replace(" ", "-");
 
-                fileOutputDirectory.AddOrUpdate((title, toc), contents, (key, oldContents) => oldContents + contents);
-                oldFileNameToNew.TryAdd(file.Name, (title, toc));
+                string newFileName = GetSubString(title, new[] { " " }) + ".md";
+
+                string newDirectory = GetSubString(toc, new[] { " ", "(", "_", "-" });
+
+                fileOutputDirectory.AddOrUpdate((newFileName, newDirectory), contents, (key, oldContents) => oldContents + contents);
+                oldFileNameToNew.TryAdd(file.Name, (newFileName, newDirectory));
             });
 
             var outputPath = new DirectoryInfo("/Users/abc/code/website/input/rx-docs");
+            outputPath.Delete(true);
 
             foreach (var entry in fileOutputDirectory)
             {
@@ -48,6 +53,32 @@ namespace DotNetConverter
 
                 await File.WriteAllTextAsync(newFileName, entry.Value);
             }
+        }
+
+        private static string GetSubString(string title, string[] separators)
+        {
+            string newFileName;
+            int indexOf = 0;
+            try
+            {
+                var values = separators.Select(separator => title.IndexOf(separator, StringComparison.Ordinal)).Where(x => x > 0).ToList();
+                indexOf = values.Count > 0 ? values.Min() : -1;
+            }
+            catch
+            {
+                indexOf = -1;
+            }
+
+            if (indexOf > 0)
+            {
+                newFileName = title.Substring(0, indexOf);
+            }
+            else
+            {
+                newFileName = title;
+            }
+
+            return newFileName;
         }
     }
 }
